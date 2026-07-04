@@ -1,0 +1,24 @@
+[worldserver]
+
+###################################################################################################
+#    Crossrealm Copy Config
+###################################################################################################
+#
+#    CrossrealmCopy.Enabled
+#        Description: Enables/Disables crossrealm copy command.
+#        Default:     1
+#
+#    CrossrealmCopy.SourceRealmCharacterDatabaseInfo
+#        Description: Connection settings for the source realm's characters database.
+#                     Characters will be copied from this database.
+#        Example:     "hostname;port;username;password;database"
+#                     ".;somenumber;username;password;database" - (Use named pipes on Windows
+#                                                                 "enable-named-pipe" to [mysqld]
+#                                                                 section my.ini)
+#                     ".;/path/to/unix_socket;username;password;database" - (use Unix sockets on
+#                                                                           Unix/Linux)
+#        Default:     "127.0.0.1;3306;acore;acore;acore_characters"
+#
+
+CrossrealmCopy.Enabled = 1
+CrossrealmCopy.SourceRealmCharacterDatabaseInfo = "127.0.0.1;3306;acore;acore;acore_characters"

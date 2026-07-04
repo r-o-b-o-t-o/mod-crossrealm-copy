@@ -1,0 +1,119 @@
+[worldserver]
+
+########################################
+# mod-crossrealm-copy configuration
+########################################
+#
+#    CrossRealmCopy.Enabled
+#        Description: Enables the `.character copy <name>` command that copies a character
+#                     from another realm's characters database onto the currently played
+#                     character (which must have the same race and class).
+#        Default:     0 - Disabled
+#                     1 - Enabled
+#
+
+CrossRealmCopy.Enabled = 0
+
+#
+#    CrossRealmCopy.SourceDatabaseInfo
+#        Description: Connection settings for the source realm's characters database.
+#                     Character data is read from this database and written into the
+#                     current realm's characters database.
+#                     Format: "hostname;port;username;password;database"
+#        Default:     "127.0.0.1;3306;acore;acore;acore_characters"
+#
+
+CrossRealmCopy.SourceDatabaseInfo = "127.0.0.1;3306;acore;acore;acore_characters"
+
+#
+#    CrossRealmCopy.RequireSameAccount
+#        Description: Requires the source character to belong to the same account id as
+#                     the player issuing the command. Only meaningful when both realms
+#                     share the same auth database (account ids must match).
+#        Default:     1 - Enabled
+#                     0 - Disabled (any character can be copied by anyone - dangerous!)
+#
+
+CrossRealmCopy.RequireSameAccount = 1
+
+#
+#    CrossRealmCopy.GMBypassSecurity
+#        Description: Accounts with a security (GM) level equal or above this value skip
+#                     the same-account and max-target-level restrictions.
+#                     Use 0 to disable the bypass entirely.
+#        Default:     3 - (SEC_ADMINISTRATOR)
+#
+
+CrossRealmCopy.GMBypassSecurity = 3
+
+#
+#    CrossRealmCopy.MaxTargetLevel
+#        Description: The copy is refused when the currently played (target) character is
+#                     above this level. This protects players from accidentally wiping a
+#                     progressed character, since all of the target's data is replaced.
+#                     Use 0 to disable the check.
+#        Default:     1 - (only fresh characters can be used as copy targets)
+#
+
+CrossRealmCopy.MaxTargetLevel = 1
+
+#
+#    CrossRealmCopy.AllowOnlineSource
+#        Description: Allows copying a character that is currently online on the source
+#                     realm. Not recommended: the data read may be stale or inconsistent
+#                     because the source realm can save the character mid-copy.
+#        Default:     0 - Disabled
+#
+
+CrossRealmCopy.AllowOnlineSource = 0
+
+#
+#    CrossRealmCopy.KickDelay
+#        Description: Seconds between the warning message and the moment the player is
+#                     disconnected to perform the copy.
+#        Default:     5
+#
+
+CrossRealmCopy.KickDelay = 5
+
+#
+#    CrossRealmCopy.BanDuration
+#        Description: Duration in seconds of the temporary character ban that keeps the
+#                     target character logged out while the copy is running. The ban is
+#                     removed as soon as the copy finishes; the duration is only a safety
+#                     net in case the server goes down mid-copy.
+#        Default:     300
+#
+
+CrossRealmCopy.BanDuration = 300
+
+#
+#    CrossRealmCopy.LogoutTimeout
+#        Description: Maximum time in seconds to wait for the target character's logout
+#                     save to be flushed to the database before giving up on the copy.
+#        Default:     60
+#
+
+CrossRealmCopy.LogoutTimeout = 60
+
+#
+#    CrossRealmCopy.MaxQueueSize
+#        Description: Maximum number of pending copy requests. Only one character is
+#                     copied at a time; additional requests wait in a queue.
+#        Default:     10
+#
+
+CrossRealmCopy.MaxQueueSize = 10
+
+#
+#    CrossRealmCopy.ConnectTimeout
+#    CrossRealmCopy.ReadTimeout
+#        Description: Network timeouts in seconds for the connection to the source
+#                     realm's database. A fresh connection is opened for every copy and
+#                     closed right after, so these only bound how long a single copy can
+#                     stall on a broken connection.
+#        Default:     10 (connect), 30 (read)
+#
+
+CrossRealmCopy.ConnectTimeout = 10
+CrossRealmCopy.ReadTimeout = 30
