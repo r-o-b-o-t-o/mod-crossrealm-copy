@@ -174,8 +174,10 @@ namespace CrossRealmCopy
         if (!connection.Connect(out.error))
             return out;
 
+        // characters.name uses a binary collation, so compare case-insensitively.
         std::string sql = Acore::StringFormat(
-            "SELECT guid, account, name, race, class, level, online FROM characters WHERE name = '{}' LIMIT 1",
+            "SELECT guid, account, name, race, class, level, online FROM characters "
+            "WHERE UPPER(name) = UPPER('{}') LIMIT 1",
             EscapeSqlLiteral(characterName));
 
         if (!connection.Execute(sql, out.error))
