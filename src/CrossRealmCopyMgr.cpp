@@ -331,9 +331,21 @@ namespace CrossRealmCopy
             return;
         }
 
-        // First wait for the session to fully drop the player...
-        if (ObjectAccessor::FindConnectedPlayer(request->targetGuid))
+        if (diff < request->onlinePollTimer)
+        {
+            request->onlinePollTimer -= diff;
             return;
+        }
+
+        request->onlinePollTimer = ONLINE_POLL_INTERVAL_MS;
+
+        // First wait for the session to fully drop the player. A player that slipped
+        // back in before the ban landed is kicked again.
+        if (Player* player = ObjectAccessor::FindConnectedPlayer(request->targetGuid))
+        {
+            player->GetSession()->KickPlayer("Cross-realm character copy");
+            return;
+        }
 
         // ... then for the logout save to land: LogoutPlayer() enqueues the character
         // save and afterwards clears the online flag, both through the same async
@@ -342,13 +354,6 @@ namespace CrossRealmCopy
         if (request->onlineCheckPending)
             return;
 
-        if (diff < request->onlinePollTimer)
-        {
-            request->onlinePollTimer -= diff;
-            return;
-        }
-
-        request->onlinePollTimer = ONLINE_POLL_INTERVAL_MS;
         request->onlineCheckPending = true;
         _queryProcessor.AddCallback(CharacterDatabase.AsyncQuery(Acore::StringFormat(
             "SELECT online FROM characters WHERE guid = {}", request->targetGuid.GetCounter()))
@@ -392,6 +397,18 @@ namespace CrossRealmCopy
                 "The copy was aborted: {}. Your character was left untouched.", snapshot.error));
             return;
         }
+
+        // The target may have been deleted from the character screen while the request
+        // was queued; writing now would resurrect it. The cache also carries a rename
+        // that happened after the request was issued.
+        CharacterCacheEntry const* targetEntry = sCharacterCache->GetCharacterCacheByGuid(request->targetGuid);
+        if (!targetEntry || targetEntry->AccountId != request->accountId)
+        {
+            FinishRequest(request, false, Acore::StringFormat(
+                "{} no longer exists on this realm, the copy was aborted.", request->targetName));
+            return;
+        }
+        request->targetName = targetEntry->Name;
 
         // The target's petitions die with its inventory (the charter items are wiped);
         // drop them from the in-memory store to match the DELETEs in the transaction.

@@ -326,8 +326,7 @@ namespace
         }
     }
 
-    void AllocateForTable(CopyTable const& spec, TableSnapshot const& table, std::size_t columnIndex,
-        ColumnRuleKind kind, GuidRemaps& remaps)
+    void AllocateForTable(TableSnapshot const& table, std::size_t columnIndex, ColumnRuleKind kind, GuidRemaps& remaps)
     {
         for (auto const& row : table.rows)
         {
@@ -377,7 +376,7 @@ namespace CrossRealmCopy
 
                 for (std::size_t i = 0; i < table.columns.size(); ++i)
                     if (StrEqualI(table.columns[i], rule.column))
-                        AllocateForTable(spec, table, i, rule.kind, remaps);
+                        AllocateForTable(table, i, rule.kind, remaps);
             }
         }
     }
