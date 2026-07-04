@@ -18,6 +18,7 @@
 #include "SourceRealmDb.h"
 #include "DatabaseEnv.h"
 #include "Log.h"
+#include "QueryResult.h"
 #include "StringFormat.h"
 #include <cstdlib>
 
