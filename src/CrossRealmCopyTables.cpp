@@ -57,6 +57,16 @@ namespace CrossRealmCopy
             { "character_pet", "owner = {}", true,
                 { { "id", Rule::NewPetNumber }, { "owner", Rule::TargetCharGuid } } },
 
+            // mod-transmog (optional module): per-item transmogrifications follow the
+            // copied item instances (auction-held items excluded, like item_instance).
+            // Keyed by item guid, so the wipe must run before item_instance is wiped
+            // (the WHERE resolves items through item_instance).
+            { "custom_transmogrification",
+                "GUID IN (SELECT guid FROM item_instance WHERE owner_guid = {} "
+                "AND guid NOT IN (SELECT itemguid FROM auctionhouse))", true,
+                { { "GUID", Rule::ItemRef }, { "Owner", Rule::TargetCharGuid } },
+                WhereKey::CharacterGuid, true, false, true },
+
             // Items. Auction-held items stay out on both sides: on the source they
             // belong to a live auction of that realm, on the target wiping them would
             // corrupt running auctions.
@@ -113,6 +123,19 @@ namespace CrossRealmCopy
             { "character_spell_cooldown", "guid = {}", true, { { "guid", Rule::TargetCharGuid } } },
             { "character_stats", "guid = {}", true, { { "guid", Rule::TargetCharGuid } } },
             { "character_talent", "guid = {}", true, { { "guid", Rule::TargetCharGuid } } },
+
+            // mod-transmog (optional module): outfit presets are per character and
+            // replaced like any other character data.
+            { "custom_transmogrification_sets", "Owner = {}", true,
+                { { "Owner", Rule::TargetCharGuid } },
+                WhereKey::CharacterGuid, true, false, true },
+
+            // mod-transmog (optional module): unlocked appearances are account-wide,
+            // so the target account's existing collection is kept and the source
+            // account's entries are merged in on top.
+            { "custom_unlocked_appearances", "account_id = {}", true,
+                { { "account_id", Rule::TargetAccount } },
+                WhereKey::AccountId, false, true, true },
 
             // The characters row itself. The target keeps its guid, account and name;
             // volatile realm-local fields are reset.
@@ -395,14 +418,22 @@ namespace CrossRealmCopy
         // Wipe the target character's rows, in spec order.
         for (CopyTable const& spec : specs)
         {
+            if (!spec.wipe)
+                continue;
+
             if (snapshot.targetColumns.find(spec.table) == snapshot.targetColumns.end())
             {
-                LOG_WARN("module", "[CrossRealmCopy] Table {} does not exist on this realm, skipping wipe", spec.table);
+                if (spec.optional)
+                    LOG_DEBUG("module", "[CrossRealmCopy] Optional table {} does not exist on this realm, skipping wipe",
+                        spec.table);
+                else
+                    LOG_WARN("module", "[CrossRealmCopy] Table {} does not exist on this realm, skipping wipe", spec.table);
                 continue;
             }
 
+            uint32 key = spec.whereKey == WhereKey::AccountId ? remaps.targetAccount : remaps.targetLow;
             trans->Append(Acore::StringFormat("DELETE FROM `{}` WHERE {}", spec.table,
-                Acore::StringFormat(spec.where, remaps.targetLow)));
+                Acore::StringFormat(spec.where, key)));
         }
 
         // Copy the snapshot rows.
@@ -453,7 +484,8 @@ namespace CrossRealmCopy
                 continue;
             }
 
-            std::string insertHead = Acore::StringFormat("INSERT INTO `{}` ({}) VALUES ", spec.table, columnList);
+            std::string insertHead = Acore::StringFormat("INSERT {}INTO `{}` ({}) VALUES ",
+                spec.insertIgnore ? "IGNORE " : "", spec.table, columnList);
             std::string statement;
             std::size_t rowsInChunk = 0;
             uint32 droppedRows = 0;

@@ -95,17 +95,21 @@ namespace
         // Runs a SELECT and stores columns and rows into the snapshot table.
         // A missing table on the source realm is not an error: the table snapshot
         // simply stays empty (the target rows still get wiped).
-        bool FetchTable(CopyTable const& spec, uint32 sourceGuid, TableSnapshot& out, std::string& error)
+        bool FetchTable(CopyTable const& spec, uint32 whereKey, TableSnapshot& out, std::string& error)
         {
             std::string sql = Acore::StringFormat("SELECT * FROM `{}` WHERE {}", spec.table,
-                Acore::StringFormat(spec.where, sourceGuid));
+                Acore::StringFormat(spec.where, whereKey));
 
             if (mysql_real_query(_mysql, sql.c_str(), sql.length()))
             {
                 if (mysql_errno(_mysql) == ERRNO_NO_SUCH_TABLE)
                 {
-                    LOG_WARN("module", "[CrossRealmCopy] Table {} does not exist on the source realm, skipping it",
-                        spec.table);
+                    if (spec.optional)
+                        LOG_DEBUG("module", "[CrossRealmCopy] Optional table {} does not exist on the source realm, "
+                            "skipping it", spec.table);
+                    else
+                        LOG_WARN("module", "[CrossRealmCopy] Table {} does not exist on the source realm, skipping it",
+                            spec.table);
                     return true;
                 }
 
@@ -241,9 +245,10 @@ namespace CrossRealmCopy
         if (!connection.Execute("START TRANSACTION WITH CONSISTENT SNAPSHOT", snapshot.error))
             return snapshot;
 
-        // The character could have been deleted or logged in since the lookup.
+        // The character could have been deleted or logged in since the lookup. The
+        // account id keys the reads of account-wide tables below.
         {
-            std::string sql = Acore::StringFormat("SELECT online FROM characters WHERE guid = {}", sourceGuid);
+            std::string sql = Acore::StringFormat("SELECT online, account FROM characters WHERE guid = {}", sourceGuid);
             if (!connection.Execute(sql, snapshot.error))
                 return snapshot;
 
@@ -258,6 +263,8 @@ namespace CrossRealmCopy
             MYSQL_ROW row = mysql_fetch_row(result);
             bool online = row && FieldToUInt64(row[0]) != 0;
             bool found = row != nullptr;
+            if (row)
+                snapshot.sourceAccount = static_cast<uint32>(FieldToUInt64(row[1]));
             mysql_free_result(result);
 
             if (!found)
@@ -278,9 +285,10 @@ namespace CrossRealmCopy
             if (!specs[i].copyRows)
                 continue;
 
+            uint32 whereKey = specs[i].whereKey == WhereKey::AccountId ? snapshot.sourceAccount : sourceGuid;
             TableSnapshot table;
             table.specIndex = i;
-            if (!connection.FetchTable(specs[i], sourceGuid, table, snapshot.error))
+            if (!connection.FetchTable(specs[i], whereKey, table, snapshot.error))
                 return snapshot;
 
             snapshot.tables.push_back(std::move(table));

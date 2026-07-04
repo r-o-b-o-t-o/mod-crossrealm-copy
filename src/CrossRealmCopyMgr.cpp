@@ -31,6 +31,12 @@
 #include "WorldSession.h"
 #include "WorldSessionMgr.h"
 #include <chrono>
+#include <cstdlib>
+#include <cstring>
+
+#ifdef MOD_CROSSREALM_COPY_WITH_TRANSMOG
+#include "Transmogrification.h"
+#endif
 
 namespace
 {
@@ -49,6 +55,35 @@ namespace
     {
         return future.valid() && future.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
     }
+
+#ifdef MOD_CROSSREALM_COPY_WITH_TRANSMOG
+    // Item template ids of the source account's unlocked appearances, used to refresh
+    // mod-transmog's in-memory collection cache once the commit succeeded.
+    std::vector<uint32> ExtractUnlockedAppearances(CrossRealmCopy::CharacterSnapshot const& snapshot)
+    {
+        std::vector<uint32> out;
+        std::vector<CrossRealmCopy::CopyTable> const& specs = CrossRealmCopy::GetCopyTables();
+        for (CrossRealmCopy::TableSnapshot const& table : snapshot.tables)
+        {
+            if (strcmp(specs[table.specIndex].table, "custom_unlocked_appearances") != 0)
+                continue;
+
+            for (std::size_t i = 0; i < table.columns.size(); ++i)
+            {
+                if (table.columns[i] != "item_template_id")
+                    continue;
+
+                for (auto const& row : table.rows)
+                    if (!row[i].isNull)
+                        out.push_back(static_cast<uint32>(std::strtoul(row[i].data.c_str(), nullptr, 10)));
+                break;
+            }
+            break;
+        }
+
+        return out;
+    }
+#endif
 }
 
 namespace CrossRealmCopy
@@ -169,6 +204,13 @@ namespace CrossRealmCopy
                     if (request->commitSuccess)
                     {
                         sCharacterCache->RefreshCacheEntry(request->targetGuid.GetCounter());
+#ifdef MOD_CROSSREALM_COPY_WITH_TRANSMOG
+                        // The merged appearance rows are committed; mirror them into
+                        // mod-transmog's account-wide cache so they are usable without
+                        // a server restart or ".transmog reload".
+                        for (uint32 itemId : request->unlockedAppearances)
+                            sTransmogrification->AddCollectedAppearance(request->accountId, itemId);
+#endif
                         FinishRequest(request, true, Acore::StringFormat(
                             "Copy complete! {} now holds the data of {}.",
                             request->targetName, request->source.name));
@@ -412,6 +454,10 @@ namespace CrossRealmCopy
         // The target's petitions die with its inventory (the charter items are wiped);
         // drop them from the in-memory store to match the DELETEs in the transaction.
         sPetitionMgr->RemovePetitionByOwnerAndType(request->targetGuid, 0);
+
+#ifdef MOD_CROSSREALM_COPY_WITH_TRANSMOG
+        request->unlockedAppearances = ExtractUnlockedAppearances(snapshot);
+#endif
 
         GuidRemaps remaps;
         remaps.sourceLow = request->source.guid;

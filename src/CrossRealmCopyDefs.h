@@ -68,15 +68,30 @@ namespace CrossRealmCopy
         ColumnRuleKind kind;
     };
 
+    // What the "{}" placeholder of a WHERE clause is replaced with.
+    enum class WhereKey : uint8
+    {
+        CharacterGuid,      // character low guid (source character / target character)
+        AccountId           // account id (source account / target account)
+    };
+
     struct CopyTable
     {
         char const* table;
-        // WHERE clause with "{}" as placeholder for a character low guid. Used both to
-        // select rows on the source realm and to delete rows on the target realm.
+        // WHERE clause with "{}" as placeholder (see whereKey). Used both to select
+        // rows on the source realm and to delete rows on the target realm.
         char const* where;
         // false: target rows are only wiped, nothing is copied from the source realm.
         bool copyRows;
         std::vector<ColumnRule> rules;
+        WhereKey whereKey = WhereKey::CharacterGuid;
+        // false: never delete target rows; the copied rows are merged in instead
+        // (for account-wide tables whose existing data must survive the copy).
+        bool wipe = true;
+        // Use INSERT IGNORE so merged rows can collide with existing primary keys.
+        bool insertIgnore = false;
+        // Table belongs to another optional module: log its absence quietly.
+        bool optional = false;
     };
 
     // Ordered list of tables handled by the copy. The order matters for the DELETE
@@ -117,6 +132,7 @@ namespace CrossRealmCopy
     struct CharacterSnapshot
     {
         uint32 sourceGuid = 0;
+        uint32 sourceAccount = 0;
         std::vector<TableSnapshot> tables;
         std::map<std::string, std::vector<std::string>> targetColumns;
         std::string error;      // non-empty when the snapshot failed

@@ -41,6 +41,25 @@ petitions, corpse location, calendar events, declined names.
 The copy is schema-tolerant: only columns that exist on **both** realms are transferred,
 so custom columns on either side do not break the copy.
 
+## mod-transmog integration (optional)
+
+When [mod-transmog](https://github.com/azerothcore/mod-transmog) tables exist, the copy
+also transfers:
+
+- `custom_transmogrification` — active transmogs, following the copied items (remapped
+  to their new item GUIDs).
+- `custom_transmogrification_sets` — outfit presets, wiped and replaced like the rest
+  of the character data.
+- `custom_unlocked_appearances` — the source account's appearance collection is
+  **merged** into the target account's existing collection (account-wide data is never
+  wiped).
+
+The integration is fully optional: realms without mod-transmog simply skip these
+tables. When both modules are compiled statically into the same worldserver, the merged
+appearances are also pushed into mod-transmog's in-memory collection cache right after
+the copy, so they are usable immediately; otherwise they show up after a server restart
+or a `.transmog reload`.
+
 ## Requirements & safety design
 
 - Works with the `acore_characters` database of any realm running the same (or a close)

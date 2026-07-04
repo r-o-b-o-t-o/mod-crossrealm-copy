@@ -67,6 +67,9 @@ namespace CrossRealmCopy
         bool commitSuccess = false;
 
         SourceCharacter source;
+        // Appearance ids merged into custom_unlocked_appearances, kept to refresh
+        // mod-transmog's in-memory collection cache after the commit succeeds.
+        std::vector<uint32> unlockedAppearances;
         std::future<SourceCharacter> lookupFuture;
         std::future<CharacterSnapshot> readFuture;
         std::optional<TransactionCallback> commitCallback;
