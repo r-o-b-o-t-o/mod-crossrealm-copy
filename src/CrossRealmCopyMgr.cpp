@@ -170,7 +170,7 @@ namespace CrossRealmCopy
                     {
                         sCharacterCache->RefreshCacheEntry(request->targetGuid.GetCounter());
                         FinishRequest(request, true, Acore::StringFormat(
-                            "Copy complete! {} now holds the data of {}. You can log back in.",
+                            "Copy complete! {} now holds the data of {}.",
                             request->targetName, request->source.name));
                     }
                     else
@@ -259,8 +259,7 @@ namespace CrossRealmCopy
         if (ObjectAccessor::FindConnectedPlayer(request->targetGuid))
         {
             NotifyRequester(*request, Acore::StringFormat(
-                "Copying {} from the source realm onto {}: you will be disconnected in {} seconds. "
-                "Do NOT log this character back in until you are told the copy is finished.",
+                "Copying {} from the source realm onto {}: you will be disconnected in {} seconds.",
                 source.name, request->targetName, _kickDelayMs / 1000));
             request->state = CopyState::Warning;
             request->stateTimer = _kickDelayMs;

@@ -17,9 +17,9 @@ characters from another realm onto the realm they are currently playing.
    where `Name` is the name of your character on the source realm.
 3. Wait for your turn (copies run one at a time; the queue position is announced in the
    chat). When the copy starts you are warned, then disconnected a few seconds later.
-4. **Stay logged out** until the confirmation message. The character is temporarily
+4. **Stay logged out** for a few seconds. The character is temporarily
    banned during the copy so it cannot be played while its data is rewritten; the ban is
-   lifted automatically the moment the copy finishes (or fails).
+   lifted automatically the moment the copy finishes.
 
 All data of the target character is **wiped** and replaced by the source character's
 data. The target keeps its own name, account and GUID.
