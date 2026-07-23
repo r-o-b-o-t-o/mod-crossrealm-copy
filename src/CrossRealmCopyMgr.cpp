@@ -301,7 +301,7 @@ namespace CrossRealmCopy
         if (ObjectAccessor::FindConnectedPlayer(request->targetGuid))
         {
             NotifyRequester(*request, Acore::StringFormat(
-                "Copying {} from the source realm onto {}: you will be disconnected in {} seconds.",
+                "Copying {} from the source realm onto {}: you will be disconnected in {} seconds. Please wait for a few seconds before logging back in!",
                 source.name, request->targetName, _kickDelayMs / 1000));
             request->state = CopyState::Warning;
             request->stateTimer = _kickDelayMs;
